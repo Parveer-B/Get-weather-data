@@ -31,14 +31,15 @@ def averagee(arr):
 
 # Access a variable (e.g., temperature)
 class location_generation:
-    def __init__(self, dataset, studylocation):
+    def __init__(self, dataset, studylocation, evtype):
         lons = dataset.variables['lon'][:]
         lats = dataset.variables['lat'][:]
-        tornadoes = dataset.variables['sigtorn'][:]
+
+        frequency = dataset.variables[evtype][:]
 
         dataset.close()
         points = np.column_stack((lons.ravel(), lats.ravel())) #unravels the grids and converts them to a set of points
-        values = tornadoes.ravel()
+        values = frequency.ravel()
         #get a grid of locations to interpolate to
         grid_x, grid_y = np.mgrid[np.min(lons):np.max(lons):4000j, np.min(lats):np.max(lats):4000j]
         #get a grid of the tornado probabilities wrt grid x and y (4000x4000)

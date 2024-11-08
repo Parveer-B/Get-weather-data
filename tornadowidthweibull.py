@@ -50,7 +50,7 @@ class widthGenerator:
             stats.probplot(genwidths, dist='weibull_min', sparams=(parameters[0], parameters[1], parameters[2]), fit=True, rvalue=True, plot=plt)
             plt.title('Magnitude '+ str(5) +  ' data Weibull q-q plot with generated data')
             plt.show()
-        return width_imperial/1094 #convert to normal people units
+        return width_imperial/1094 #convert to normal people units (km)
 
 
 def data_testing(variable, limdata, largerdata):
@@ -84,7 +84,7 @@ def data_testing(variable, limdata, largerdata):
 
 
 def test_weibull(mag, widths):
-    c, loc, scale = stats.weibull_min.fit(widths) #for some reason this requires a shape
+    c, loc, scale = stats.weibull_min.fit(widths)
     fig = plt.figure()
     ax = fig.add_subplot(111)
     stats.probplot(widths, dist='weibull_min', sparams=(c, loc, scale), plot=ax)
@@ -133,7 +133,8 @@ for index, row in inc_other_states.iterrows():
 data_testing('width', txwid, inc_wid) """
 
 
-#Weibull testing is below, page 14-16 of october notes
+#Weibull testing is below, page 14-16 of october notes (update, and pages 18-20)
+"""
 for magnitude in range(2, 6):
 
     if magnitude == 5:
@@ -143,3 +144,4 @@ for magnitude in range(2, 6):
 
     widths = sampleset['wid'].to_list()
     test_weibull(magnitude, widths)
+"""
