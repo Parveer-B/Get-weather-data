@@ -45,6 +45,9 @@ class get_tornado_data:
         #grab row of that specific magnitude to get length
         mag_randrow = (df_tx_mag.sample(n=1)).iloc[0]
         length = mag_randrow['len'] * 1.60934
+        while length == 0:
+            mag_randrow = (df_tx_mag.sample(n=1)).iloc[0]
+            length = mag_randrow['len'] * 1.60934
         #get length in km (originally in miles)
 
         width = self.widthgen.get_width(df_tx_mag, magnitude)

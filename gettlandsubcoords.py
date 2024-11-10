@@ -24,7 +24,7 @@ def gettlcoords():
         for point in line.MultiGeometry.Point:
             locdata = point.coordinates.text
             locdata = locdata.split(',')
-            lonlats.append(list(map(float, locdata[0:1])))
+            lonlats.append(list(map(float, locdata[0:2])))
         sameconnection = busfounds.count([min(buses), max(buses)])
         lines.append({'busfrom' : buses[0], 'busto' : buses[1], 'from' : lonlats[0], 'to' : lonlats[1], 'connumber' : sameconnection})
     return lines
@@ -57,7 +57,7 @@ def getsubcoords():
                 subid = int(data.value.text)
         locdata = substation.Point.coordinates.text
         locdata = locdata.split(',')
-        lonlat = list(map(float, locdata[0:1]))
+        lonlat = list(map(float, locdata[0:2]))
         substations.append({'subid' : subid, 'buses' : buses, 'loc': lonlat})
     
     return substations
