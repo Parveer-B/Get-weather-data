@@ -18,7 +18,10 @@ def get_azimuth(row):
         return 'false' #string to not conflate with 0 which is legit
 
     if deltalon != 0:
-        azimuth = math.atan(deltalat/deltalon) #this is our azimuth
+        dy = deltalat/110.574
+        dx = deltalon/(111.32*math.cos(np.deg2rad(start_lat)))
+        azimuth = math.atan(dy/dx) #this is our azimuth
+        #Since our length is in km, we need to convert delta lat and lon to km first as their conversion factor isn't the same
     else:
         if deltalat>0:
             azimuth = (math.pi)/2

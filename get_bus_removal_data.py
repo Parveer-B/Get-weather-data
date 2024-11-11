@@ -3,6 +3,7 @@ import grabtornadoazlen
 import gettlandsubcoords
 import netCDF4 as nc
 import numpy as np
+from shapely.geometry import Polygon
 import random
 import math
 
@@ -24,31 +25,36 @@ def getbox(slon, slat, len, wid, az):
 
     return np.vstack((start+dside, start-dside,start-dside+dfor, start+dside+dfor))
 
+def pointinquadral(point, box):
+    areaofbox = 0
+    for x in range(len(box)):
+        areaofbox+=box[x][1]*(box[(x-1)%len(box)][0]-box[(x+1)%len(box)][0])
+    areaofbox = abs(areaofbox)/2
+
+    areatriangles = 0
+    for x in range(4):
+        A = box[x]
+        B = box[(x+1)%len(box)]
+        areatriangles += Polygon(np.vstack((A, B, point))).area
+    if abs(areatriangles - areaofbox) <= 1e-5:
+        return True
+    else:
+        return False
+
+
 def getbusesinbox(substations, box):
     #Box has corners ABCD in the order of the box array
-    AD = box[3] - box[0]
-    AB = box[1] - box[0]
-    ADsq = np.dot(AD, AD)
-    ABsq = np.dot(AB, AB)
     hitbuses = []
     for substation in substations:
         P = substation['loc'] #location of substation
-        AP = P - box[0]
-        val1 = np.dot(AP, AB)/ABsq
-        val2 = np.dot(AP, AD)/ADsq
-
-        if 0<=val1<=1 and 0<=val2<=1:
+        if pointinquadral(P, box):
             hitbuses.extend(substation['buses'])
     return hitbuses
 
 def gettlinbox(lines, box):
-    AD = box[3] - box[0]
-    AB = box[1] - box[0]
-    ADsq = np.dot(AD, AD)
-    ABsq = np.dot(AB, AB)
     boxlines = []
     for x in range(4):
-        #In Ax+By+C form, put A,B,C in the array as indexes 0,1,2
+        #In Ax+By=C form, put A,B,C in the array as indexes 0,1,2
         #The array has lines AB, BC, CD, DA
         A = box[(x+1)%4][1] - box[x][1]
         B = box[x][0] - box[(x+1)%4][0]
@@ -59,78 +65,62 @@ def gettlinbox(lines, box):
     for tlinedict in lines:
         st = tlinedict['from']
         end = tlinedict['to']
-        tline = [end[1] - st[1], st[0] - end[0], end[1]*st[0] - end[0]*st[1]]
+        if tlinedict['busfrom'] == 220007 or tlinedict['busto'] == 220007:
+            a=6
+        tline = [end[1] - st[1], st[0] - end[0], end[1]*st[0] - end[0]*st[1]] #equation for a line in [A,B,C] array
 
         #now using https://math.stackexchange.com/questions/424723/determinant-in-line-line-intersection, with denominator being D
         connections = []
-        for boxline, i in enumerate(boxlines):
+        for i, boxline in enumerate(boxlines):
             #tline is index 1 and boxline is index 2 in the post above
             D = tline[0]*boxline[1] -boxline[0]*tline[1]
             if D==0:
                 pass
             x_int = (tline[2]*boxline[1] - boxline[2]*tline[1])/D
             if (box[i][0] < x_int < box[(i+1)%4][0]) or (box[i][0] > x_int > box[(i+1)%4][0]):
-                y_int = (tline[2] - tline[0]*x_int)/tline[1]
-                connections.append([x_int, y_int])
-                if len(connections) == 2:
-                    break #shouldn't need this, but might have a corner edgecase
+                if (st[0] < x_int < end[0]) or (st[0] > x_int > end[0]):
+                    y_int = (tline[2] - tline[0]*x_int)/tline[1]
+                    connections.append([x_int, y_int])
+                    if len(connections) == 2:
+                        break #shouldn't need this, but might have a corner edgecase
+        if len(connections) == 1: #for breakpoint pls delete later!
+            a = 6
         if len(connections) == 2:
             linesinbox.append(tlinedict)
             dlat = connections[1][1] - connections[0][1]
             dlon = connections[1][0] - connections[0][0]
             dy = dlat*110.57 #y change in km
-            dx = dlon*111.32.np.cos(np.deg2rad(connections[0][1])) #just use the first connection y value as the latitude
+            dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1])) #just use the first connection y value as the latitude
             lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
         elif len(connections) == 1:
             #one end of TL might be in the box while to other isn't
-            AP = st - box[0]
-            val1 = np.dot(AP, AB)/ABsq
-            val2 = np.dot(AP, AD)/ADsq
 
-            AP = end - box[0]
-            val3 = np.dot(AP, AB)/ABsq
-            val4 = np.dot(AP, AD)/ADsq
-
-            if 0<=val1<=1 and 0<=val2<=1:
+            if pointinquadral(st, box): #one end in box
                 linesinbox.append(tlinedict)
                 dlat = st[1] - connections[0][1]
                 dlon = st[0] - connections[0][0]
                 dy = dlat*110.57 #y change in km
                 dx = dlon*111.32.np.cos(np.deg2rad(connections[0][1]))
                 lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
-            elif 0<=val3<=1 and 0<=val4<=1:
+            elif pointinquadral(end, box): #other end in box
                 linesinbox.append(tlinedict)
                 dlat = end[1] - connections[0][1]
                 dlon = end[0] - connections[0][0]
                 dy = dlat*110.57 #y change in km
-                dx = dlon*111.32.np.cos(np.deg2rad(connections[0][1]))
+                dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1]))
                 lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
         else: #len(connections) = 0, entire TL can be in the box
-            AP = st - box[0]
-            val1 = np.dot(AP, AB)/ABsq
-            val2 = np.dot(AP, AD)/ADsq
-
-            AP = end - box[0]
-            val3 = np.dot(AP, AB)/ABsq
-            val4 = np.dot(AP, AD)/ADsq
-            if 0<=val1<=1 and 0<=val2<=1 and 0<=val3<=1 and 0<=val4<=1:
+            if pointinquadral(st, box) and pointinquadral(end, box):
                 #technically if this is true for one end of the TL it has to be true for the other but whatever
                 linesinbox.append(tlinedict)
                 dlat = st[1] - end[1]
-                dlon = st[0] - end[1]
+                dlon = st[0] - end[0]
                 dy = dlat*110.57 #y change in km
-                dx = dlon*111.32.np.cos(np.deg2rad(st[1]))
+                dx = dlon*111.32*np.cos(np.deg2rad(st[1]))
                 lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
 
 
     return linesinbox, lenlinesinbox
-
-
-
-
-
-
-
 
 
 
@@ -157,9 +147,12 @@ class Buses_Removed:
         self.transmissionlines = gettlandsubcoords.gettlcoords()
 
 
-    def generate_tornado(self):
-        slon, slat = self.tornadoposgen.get_touchdown_point()
-        magnitude, length, width, azimuth = self.tornadodatagen.gettornadostats(slon, slat)
+    def generate_tornado(self, givenevent):
+        if givenevent:
+            slon, slat, magnitude, length, width, azimuth = givenevent[1:]
+        else:
+            slon, slat = self.tornadoposgen.get_touchdown_point()
+            magnitude, length, width, azimuth = self.tornadodatagen.gettornadostats(slon, slat)
         #length and width are in kilometres, azimuth is in radians
         eventbox = getbox(slon, slat, length, width, azimuth)
         return eventbox, magnitude
@@ -169,18 +162,25 @@ class Buses_Removed:
         return 5, 6
 
 
-    def get_event_data(self):
-        
-        eventtype = self.eventtypes[np.searchsorted(np.cumsum(self.probwindhailtorn), random.random())]
-        if eventtype == 'tornado':
-            eventbox, severity = self.generate_tornado()
+    def get_event_data(self, givenevent = False):
+        if givenevent:
+            eventtype = givenevent[0]
         else:
-            eventbox, severity, __, __ = self.generate_windhail(eventtype)
+            eventtype = self.eventtypes[np.searchsorted(np.cumsum(self.probwindhailtorn), random.random())]
+        if eventtype == 'tornado':
+            eventbox, severity = self.generate_tornado(givenevent)
+        else:
+            eventbox, severity, __, __ = self.generate_windhail(eventtype, givenevent)
 
         busesinbox = getbusesinbox(self.substations, eventbox)
         tlinbox, lentlinbox = gettlinbox(self.transmissionlines, eventbox)
+
+        #just put these in for now, will modify when civ model added
+        busesremoved = busesinbox
+        tlremoved = tlinbox
+        lentlinbox = lentlinbox
         
-        return busesinbox, tlinbox, lentlinbox, busesremoved, tlremoved, eventbox, weathertype, severity
+        return busesinbox, tlinbox, lentlinbox, busesremoved, tlremoved, eventbox, eventtype, severity
 
         
     
