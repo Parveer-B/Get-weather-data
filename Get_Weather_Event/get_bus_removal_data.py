@@ -1,6 +1,6 @@
-import readheatmapdata
-import grabtornadoazlen
-import gettlandsubcoords
+from Get_Weather_Event import readheatmapdata
+from Get_Weather_Event import grabtornadoazlen
+from Get_Weather_Event import gettlandsubcoords
 import netCDF4 as nc
 import numpy as np
 from shapely.geometry import Polygon
@@ -32,7 +32,7 @@ def pointinquadral(point, box):
     areaofbox = abs(areaofbox)/2
 
     areatriangles = 0
-    for x in range(4):
+    for x in range(len(box)):
         A = box[x]
         B = box[(x+1)%len(box)]
         areatriangles += Polygon(np.vstack((A, B, point))).area
@@ -45,11 +45,13 @@ def pointinquadral(point, box):
 def getbusesinbox(substations, box):
     #Box has corners ABCD in the order of the box array
     hitbuses = []
+    hitsubstations = []
     for substation in substations:
         P = substation['loc'] #location of substation
         if pointinquadral(P, box):
             hitbuses.extend(substation['buses'])
-    return hitbuses
+            hitsubstations.append(substation['subid'])
+    return hitbuses, hitsubstations
 
 def gettlinbox(lines, box):
     boxlines = []
@@ -61,12 +63,9 @@ def gettlinbox(lines, box):
         C = A*box[x][0] + B*box[x][1]
         boxlines.append([A, B, C])
     linesinbox = []
-    lenlinesinbox = []
     for tlinedict in lines:
         st = tlinedict['from']
         end = tlinedict['to']
-        if tlinedict['busfrom'] == 220007 or tlinedict['busto'] == 220007:
-            a=6
         tline = [end[1] - st[1], st[0] - end[0], end[1]*st[0] - end[0]*st[1]] #equation for a line in [A,B,C] array
 
         #now using https://math.stackexchange.com/questions/424723/determinant-in-line-line-intersection, with denominator being D
@@ -83,15 +82,14 @@ def gettlinbox(lines, box):
                     connections.append([x_int, y_int])
                     if len(connections) == 2:
                         break #shouldn't need this, but might have a corner edgecase
-        if len(connections) == 1: #for breakpoint pls delete later!
-            a = 6
         if len(connections) == 2:
             linesinbox.append(tlinedict)
             dlat = connections[1][1] - connections[0][1]
             dlon = connections[1][0] - connections[0][0]
             dy = dlat*110.57 #y change in km
             dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1])) #just use the first connection y value as the latitude
-            lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
+            linesinbox[-1]['leninbox'] = math.sqrt(dy**2 + dx**2)
+            #not append? just add to a dictionary?
         elif len(connections) == 1:
             #one end of TL might be in the box while to other isn't
 
@@ -100,15 +98,15 @@ def gettlinbox(lines, box):
                 dlat = st[1] - connections[0][1]
                 dlon = st[0] - connections[0][0]
                 dy = dlat*110.57 #y change in km
-                dx = dlon*111.32.np.cos(np.deg2rad(connections[0][1]))
-                lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
+                dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1]))
+                linesinbox[-1]['leninbox'] = math.sqrt(dy**2 + dx**2)
             elif pointinquadral(end, box): #other end in box
                 linesinbox.append(tlinedict)
                 dlat = end[1] - connections[0][1]
                 dlon = end[0] - connections[0][0]
                 dy = dlat*110.57 #y change in km
                 dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1]))
-                lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
+                linesinbox[-1]['leninbox'] = math.sqrt(dy**2 + dx**2)
         else: #len(connections) = 0, entire TL can be in the box
             if pointinquadral(st, box) and pointinquadral(end, box):
                 #technically if this is true for one end of the TL it has to be true for the other but whatever
@@ -117,10 +115,10 @@ def gettlinbox(lines, box):
                 dlon = st[0] - end[0]
                 dy = dlat*110.57 #y change in km
                 dx = dlon*111.32*np.cos(np.deg2rad(st[1]))
-                lenlinesinbox.append(math.sqrt(dy**2 + dx**2))
+                linesinbox[-1]['leninbox'] = math.sqrt(dy**2 + dx**2)
 
 
-    return linesinbox, lenlinesinbox
+    return linesinbox
 
 
 
@@ -128,9 +126,9 @@ class Buses_Removed:
     def __init__(self):
         #studylocation = [-110, -79, 25, 47.6] #minx, maxx, miny, maxy, whole mainland
         studylocation = [-108, -93, 25, 37]
-        self.tornadoposgen = readheatmapdata.location_generation(nc.Dataset('Heatmaps/sigtornEF2orhigher.nc'), studylocation, 'sigtorn')
-        self.hailposgen = readheatmapdata.location_generation(nc.Dataset('Heatmaps/sighailover2inches.nc'), studylocation, 'sighail')
-        self.windposgen = readheatmapdata.location_generation(nc.Dataset('Heatmaps/allsigwindover64knots.nc'), studylocation, 'allsigwind')
+        self.tornadoposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/sigtornEF2orhigher.nc'), studylocation, 'sigtorn')
+        self.hailposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/sighailover2inches.nc'), studylocation, 'sighail')
+        self.windposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/allsigwindover64knots.nc'), studylocation, 'allsigwind')
         #note, when filtering wind and hail data, make it consistent with the heatmaps
 
         self.tornadodatagen = grabtornadoazlen.get_tornado_data()
@@ -163,6 +161,8 @@ class Buses_Removed:
 
 
     def get_event_data(self, givenevent = False):
+        #I can also add an event here if I want to test MATLAB
+        givenevent = ['tornado', -103.548, 29.4217, 3, 20, 4, math.pi/8]
         if givenevent:
             eventtype = givenevent[0]
         else:
@@ -170,17 +170,17 @@ class Buses_Removed:
         if eventtype == 'tornado':
             eventbox, severity = self.generate_tornado(givenevent)
         else:
-            eventbox, severity, __, __ = self.generate_windhail(eventtype, givenevent)
+            eventbox, severity, __, __ = self.generate_wind_hail(eventtype, givenevent)
 
-        busesinbox = getbusesinbox(self.substations, eventbox)
-        tlinbox, lentlinbox = gettlinbox(self.transmissionlines, eventbox)
+        busesinbox, substationsinbox = getbusesinbox(self.substations, eventbox)
+        tlinbox = gettlinbox(self.transmissionlines, eventbox)
 
         #just put these in for now, will modify when civ model added
         busesremoved = busesinbox
         tlremoved = tlinbox
-        lentlinbox = lentlinbox
+
         
-        return busesinbox, tlinbox, lentlinbox, busesremoved, tlremoved, eventbox, eventtype, severity
+        return busesinbox, tlinbox, busesremoved, tlremoved, eventbox, eventtype, severity, substationsinbox
 
         
     

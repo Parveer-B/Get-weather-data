@@ -98,7 +98,7 @@ def test_weibull(mag, widths):
 
 
     
-df = pd.read_csv('all tornadoes/1950-2023_torn.csv') #needed for testing below
+df = pd.read_csv('Get_Weather_Event/all tornadoes/1950-2023_torn.csv') #needed for testing below
 df = df.drop_duplicates(subset=['time', 'date'])
 
 #below is just testing get_width, page 17 of october notes

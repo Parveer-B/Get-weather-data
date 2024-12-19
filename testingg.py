@@ -1,8 +1,11 @@
-import get_bus_removal_data
+from Get_Weather_Event import get_bus_removal_data
 import netCDF4 as nc
 import math
+import sys
 
 from collections import Counter
+
+
 event_generator = get_bus_removal_data.Buses_Removed()
 
 

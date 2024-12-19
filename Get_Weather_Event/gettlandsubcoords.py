@@ -4,7 +4,7 @@ def findOccurrences(s, ch):
     return [i for i, letter in enumerate(s) if letter == ch]
 
 def gettlcoords():
-    kml_file = "Buslocs/texastlkml.kml"
+    kml_file = "Get_Weather_Event/Buslocs/texastlkml.kml"
     with open(kml_file) as f:
         doc = parser.parse(f)
 
@@ -34,7 +34,7 @@ def gettlcoords():
 
 
 def getsubcoords():
-    kml_file = "Buslocs/texaskml.kml"
+    kml_file = "Get_Weather_Event/Buslocs/texaskml.kml"
     with open(kml_file) as f:
         doc = parser.parse(f)
 

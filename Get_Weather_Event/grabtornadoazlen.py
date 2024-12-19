@@ -6,14 +6,14 @@ import pandas as pd
 import random
 import numpy as np
 import math
-import tornadowidthweibull
+from Get_Weather_Event import tornadowidthweibull
 
 def get_distance(dblon, dblat, lon, lat):
     return math.sqrt((dblon-lon)**2 + (dblat-lat)**2)
 
 class get_tornado_data:
     def __init__(self):
-        df = pd.read_csv('all tornadoes/1950-2023_torn.csv')
+        df = pd.read_csv('Get_Weather_Event/all tornadoes/1950-2023_torn.csv')
         df_tx_with_dup = df.loc[(df['st'] == 'TX') & (df['mag'] >= 2)]
         self.df_tx = df_tx_with_dup.drop_duplicates(subset=['time', 'date'])
         df_mag_5_with_dup = df.loc[(df['st'].isin(['TX', 'LA', 'OK', 'AR', 'NM'])) & (df['mag'] == 5)]
@@ -25,7 +25,7 @@ class get_tornado_data:
     def gettornadostats(self, slon, slat):
         #get a random magnitude and azimuth
         distances = self.df_tx.apply(lambda row: get_distance(row['slon'], row['slat'], slon, slat), axis=1)
-        n = 50
+        n = 50 #closest tornadoes to grab a magnitude from
         lowest_dis_rows = self.df_tx.loc[distances.nsmallest(n).index]
         row = (lowest_dis_rows.sample(n=1)).iloc[0]
         magnitude = row['mag']
@@ -54,6 +54,6 @@ class get_tornado_data:
         #return length, width, azimuth
         return magnitude, length, width, azimuth
 
-df = pd.read_csv('all tornadoes/1950-2023_torn.csv')
+df = pd.read_csv('Get_Weather_Event/all tornadoes/1950-2023_torn.csv')
 df_mag_5 = df.loc[(df['st'].isin(['TX', 'LA', 'OK', 'AR', 'NM'])) & (df['mag'] == 5)]
 f = 6
