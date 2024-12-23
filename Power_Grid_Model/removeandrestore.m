@@ -11,17 +11,23 @@ rng('shuffle')
 
 linetimings = [lines_to_remove.leninbox];
 %Do lines first
-
-for i=1:size(lines_to_remove, 2)
+alllineidxs = zeros(1, size(lines_to_remove, 1));
+for i=1:size(lines_to_remove, 1)
     line = lines_to_remove(i);
     matchlineidx = find((mpc.branch(:, F_BUS) == line.busfrom | mpc.branch(:, T_BUS) == line.busfrom) & (mpc.branch(:, F_BUS) == line.busto | mpc.branch(:, T_BUS) == line.busto));
-    lineidx = matchlineidx(lines_to_remove.connumber);
+    lineidx = matchlineidx(line.connumber);
+    alllineidxs(i) = lineidx;
     removedlines = [removedlines; mpc.branch(lineidx,:)];
-    mpc.branch(lineidx,:) = []; 
+    %mpc.branch(lineidx,:) = [];, this line breaks everything loll
 end
 
+mpc.branch(alllineidxs, :) = []; %remove removed lines from the mpc
 
-for i=1:size(buses_to_remove, 2)
+remlineidx = alllineidxs*-1; %this provides a correspondance between the lines in the mpc, and my lines in the sequence
+
+
+
+for i=1:size(buses_to_remove, 1)
     rowtoremove = find(mpc.bus(:,1) == buses_to_remove(i));
 
 
@@ -38,18 +44,27 @@ end
    
 
 %islanding = py.importlib.import_module('islanding'); %just used in BELUGA
-branchespy = py.numpy.array(mpc.branch(:,1:2));
-buslist = py.numpy.array(mpc.bus(:,1));
-islanding = py.islanding.test_islanding(branchespy, buslist);
+branches = mpc.branch(:, 1:2);        
+buslist = mpc.bus(:, 1); 
+islanding = test_islanding(branches, buslist);
 islands = reshape(cell(islanding), [size(islanding, 2), 1]);
+
+
 %island calculations should be the same as before when removing lines
+%The above used to be sent to python, but I'm getting a weird error
+%recently. Prof. Taeyong converted it to Matlab so i'm using his code
 
+%used to be 
+% branchespy = py.numpy.array(mpc.branch(:,1:2));
+% buslist = py.numpy.array(mpc.bus(:,1));
+% islanding = py.islanding.test_islanding(branchespy, buslist);
+% islands = reshape(cell(islanding), [size(islanding, 2), 1]);
 
+% for i=1:size(islands,1)
+%    cq = cell(islands{i,1});
+%    islands{i,1} = [cq{:}]; %converting python stuff to matlab stuff
+% end
 
-for i=1:size(islands,1)
-   cq = cell(islands{i,1});
-   islands{i,1} = [cq{:}]; %converting python stuff to matlab stuff
-end
 
 %After this section, we have removed all the buses and seperated everything
 %into islands
@@ -60,7 +75,6 @@ for i=1:size(islands,1)
     sim = getislandmpc(mpc,islands{i});
     cases(i).params = sim;
 end
-%this should also be the same
 
 
 %get results here
@@ -80,16 +94,21 @@ for i=1:size(islands,1)
     totalshed = totalshed + 100*sum(resultt(end-numbuses+1:end));
 end
 
-totalknockedout = sum(removedbuses(:,PD));
+if size(buses_to_remove, 2) == 0
+    totalknockedout = 0;
+else
+    totalknockedout = sum(removedbuses(:,PD));
+end
 
 totalloss = totalshed + totalknockedout;
 
+correspondance = table(transpose(remlineidx), lines_to_remove);
 
 %Do bus restoration here
-outputstruct = repmat(struct('allseq', [], 'seq', [], 'cost', 0, 'time', 0), size(algoinputs, 1), 1);
+outputstruct = repmat(struct('allseq', [], 'seq', [], 'cost', 0, 'time', 0, 'correspondance', correspondance), size(algoinputs, 1), 1);
 for i = 1:size(algoinputs, 1)
     tic
-    [allsequences, bestsequence, cost] = algoinputs(i).function(algoinputs(i).value, mpc, removedbuses, removedlines, linetimings, cutlines, totalloss);
+    [allsequences, bestsequence, cost] = algoinputs(i).function(algoinputs(i).value, mpc, removedbuses, removedlines, remlineidx, linetimings, cutlines, totalloss);
     %with the addition of removedlines above only keepx will work!
     outputstruct(i).time = toc;
     outputstruct(i).allseq = allsequences;

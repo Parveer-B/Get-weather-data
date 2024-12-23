@@ -1,68 +1,47 @@
-function [allsequences,bestsequence,cost] = keepx(keepn,mpc, removedbuses, removedlines, linetimings, cutlines, origloss)
+function [allsequences,bestsequence,cost] = keepx(keepn,mpc, removedbuses, removedlines, remlineidx, linetimings, cutlines, origloss)
 %Greedy but instead of keeping the best sequence, we keep the best n
 %sequences before continuing
 %   Detailed explanation goes here
 define_constants;
 timingmodifier = 0.2;
 %create a struct of the sequences for the current iteration
-cursequences = repmat(struct('sequence', {{}}, 'cost', 0, 'mockcost' ,0, 'lossafteriter', origloss, 'totalrestored', 0, 'iterrestored', 0, 'totaltime', 0), 1, 1);
+cursequences = repmat(struct('sequence', [], 'cost', 0, 'mockcost' ,0, 'lossafteriter', origloss, 'totalrestored', 0, 'iterrestored', 0, 'totaltime', 0), 1, 1);
 %create a struct of the sequences for the next iteration
 allsequences = cell(size(removedbuses, 1) + size(removedlines, 1), 1);
 newsequences = 0;
 for i=1:(size(removedbuses, 1) + size(removedlines, 1) -1)
     for j=1:size(cursequences, 1)
         for k=1:size(removedbuses, 1)
-            if ~any(cellfun(@(x) isequal(x, removedbuses(k, 1)), cursequences(j).sequence))%check if bus is not already in the sequence
-                if isempty(cursequences(j).sequence)
-                    toaddsequence = {removedbuses(k, 1)}; %new sequence
-                else
-                    %toaddsequence = {cursequences(j).sequence{1},  removedbuses(k, 1)};
-                    for m = 1:(i-1)
-                        toaddsequence{m} = cursequences(j).sequence{m};
-                    end
-                    toaddsequence{i} = removedbuses(k, 1);
-                end
+            if ~ismember(removedbuses(k, 1), cursequences(j).sequence) %check if bus is not already in the sequence
+                toaddsequence = [cursequences(j).sequence; removedbuses(k, 1)];
                 %toaddsequence = toaddsequence(~cellfun('isempty', toaddsequence)); %weird thing is happening with the sequence thing being a cell array
-                lossafteriter = addbusandsim(mpc, removedbuses, removedlines, cutlines, toaddsequence); %get total loss of buses using this sequence
+                lossafteriter = addbusandsim(mpc, removedbuses, removedlines, remlineidx, cutlines, toaddsequence); %get total loss of buses using this sequence
                 eventtime = size(cutlines(cutlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(cutlines(cutlines(:, T_BUS) == removedbuses(k, 1), :), 1);
                 eventtime = eventtime + size(removedlines(removedlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(removedlines(removedlines(:, T_BUS) == removedbuses(k, 1), :), 1);
                 iterrestored = cursequences(j).lossafteriter - lossafteriter;
                 totalrestored = origloss - lossafteriter;
                 totaltime = cursequences(j).totaltime + eventtime;
                 if isa(newsequences, 'double') %create newsequence on first go through. Please find a better way to do this
-                    newsequences = struct('sequence', 0, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime),'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime);
-                    newsequences.sequence = toaddsequence;
+                    newsequences = struct('sequence', toaddsequence, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime),'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime);
                 else %append to newsequences
-                    newsequences = [newsequences; struct('sequence', 0, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime)];
-                    newsequences(end).sequence = toaddsequence;
+                    newsequences = [newsequences; struct('sequence', toaddsequence, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime)];
                 end
             end
         end
 
         for k=1:size(removedlines, 1)
-            if ~any(cellfun(@(x) isequal(x, removedlines(k, 1:6)), cursequences(j).sequence))%check if bus is not already in the sequence
-                if isempty(cursequences(j).sequence)
-                    toaddsequence = {removedlines(k, 1:6)}; %new sequence
-                else
-                    %toaddsequence = {cursequences(j).sequence{1},  removedbuses(k, 1)};
-                    for m = 1:(i-1)
-                        toaddsequence{m} = cursequences(j).sequence{m};
-                    end
-                    toaddsequence{i} = removedlines(k, 1:6); %new sequence
-                end
+            if ~ismember(remlineidx(k), cursequences(j).sequence) %check if line is not already in the sequence
+                toaddsequence = [cursequences(j).sequence; remlineidx(k)];
                 
-                toaddsequence = toaddsequence(~cellfun('isempty', toaddsequence));
-                lossafteriter = addbusandsim(mpc, removedbuses, removedlines, cutlines, toaddsequence); %get total loss of buses using this sequence
+                lossafteriter = addbusandsim(mpc, removedbuses, removedlines, remlineidx, cutlines, toaddsequence); %get total loss of buses using this sequence
                 iterrestored = cursequences(j).lossafteriter - lossafteriter;
                 totalrestored = origloss - lossafteriter;
                 eventtime = timingmodifier * linetimings(k);
                 totaltime = cursequences(j).totaltime + eventtime;
                 if isa(newsequences, 'double') %create newsequence on first go through. Please find a better way to do this
-                    newsequences = struct('sequence', 0, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime),'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime);
-                    newsequences.sequence = toaddsequence;
+                    newsequences = struct('sequence', toaddsequence, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime),'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime);
                 else %append to newsequences
-                    newsequences = [newsequences; struct('sequence', 0, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime)];
-                    newsequences(end).sequence = toaddsequence;
+                    newsequences = [newsequences; struct('sequence', toaddsequence, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime)];
                 end
             end
         end
@@ -84,35 +63,24 @@ end
 for j=1:size(cursequences, 1)
     found = false;
     for k=1:size(removedbuses, 1)
-        if ~any(cellfun(@(x) isequal(x, removedbuses(k, 1)), cursequences(j).sequence))
+        if ~ismember(removedbuses(k, 1), cursequences(j).sequence)
             eventtime = size(cutlines(cutlines(:, T_BUS) == removedbuses(k, 1), :), 1) + size(cutlines(cutlines(:, F_BUS) == removedbuses(k, 1), :), 1);
-            eventtime = eventtime + size(removedlines(removedlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(removedlines(removedlines(:, T_BUS) == removedbuses(k, 1), :), 1);
-            if isempty(cursequences(j).sequence)
-                toaddsequence = {removedbuses(k, 1)}; %new sequence
-            else
-                %toaddsequence = {cursequences(j).sequence{1},  removedbuses(k, 1)};
-                for m = 1:(size(allsequences, 1) - 1)
-                    toaddsequence{m} = cursequences(j).sequence{m};
-                end
-                toaddsequence{m+1} = removedbuses(k, 1);
+            if size(removedlines, 1) > 0
+                eventtime = eventtime + size(removedlines(removedlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(removedlines(removedlines(:, T_BUS) == removedbuses(k, 1), :), 1);
             end
+
+            toaddsequence = [cursequences(j).sequence; removedbuses(k, 1)];
+
             found = true;
         end
     end
 
     if ~found
         for k=1:size(removedlines, 1)
-            if ~any(cellfun(@(x) isequal(x, removedlines(k, 1:6)), cursequences(j).sequence))
+            if ~ismember(remlineidx(k), cursequences(j).sequence)
                 eventtime = timingmodifier * linetimings(k);
-                if isempty(cursequences(j).sequence)
-                    toaddsequence = {removedlines(k, 1:6)}; %new sequence
-                else
-                    %toaddsequence = {cursequences(j).sequence{1},  removedbuses(k, 1)};
-                    for m = 1:(size(allsequences, 1) - 1)
-                        toaddsequence{m} = cursequences(j).sequence{m};
-                    end
-                    toaddsequence{m+1} = removedlines(k, 1:6); %new sequence
-                end
+                toaddsequence = [cursequences(j).sequence; remlineidx(k)];
+                
             end
         end
     end
@@ -122,11 +90,9 @@ for j=1:size(cursequences, 1)
     totaltime = cursequences(j).totaltime + eventtime;
     totalrestored = origloss - lossafteriter;
     if isa(newsequences, 'double')
-        newsequences = struct('sequence', 0, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime);
-        newsequences.sequence = toaddsequence;
+        newsequences = struct('sequence', toaddsequence, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime);
     else
-        newsequences = [newsequences; struct('sequence', 0, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime)];
-        newsequences(end).sequence = toaddsequence;
+        newsequences = [newsequences; struct('sequence', toaddsequence, 'cost', cursequences(j).cost + cursequences(j).lossafteriter*(eventtime), 'mockcost', cursequences(j).mockcost +  iterrestored/totaltime + 0.0001/(eventtime), 'lossafteriter', lossafteriter, 'totalrestored', totalrestored, 'iterrestored', iterrestored, 'totaltime', totaltime)];
     end
 end
 

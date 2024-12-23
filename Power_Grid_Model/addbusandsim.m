@@ -1,47 +1,33 @@
-function totalloss = addbusandsim(mpc, removedbuses, removedlines, cutlines, toaddsequence)
+function totalloss = addbusandsim(mpc, removedbuses, removedlines, remlineidx, cutlines, toaddsequence)
 %Calculate total losses after we add the sequence of buses to the "disconnected mpc. 
 %If this doesn't work out, you can easily just remove the unused buses from
 %the original mpc
 
 define_constants;
-busesidx = cellfun(@(x) isscalar(x), toaddsequence);
-addedbuses = [toaddsequence{busesidx}]; %split my sequence into lines and buses
-addedlines = {toaddsequence{~busesidx}};
+addedbuses = toaddsequence(toaddsequence > 0); %split my sequence into lines and buses
+addedlines = toaddsequence(toaddsequence < 0);
 
 mpc.bus = [mpc.bus; removedbuses(ismember(removedbuses(:,1), addedbuses), :)]; %add buses in our sequence to the mpc
 unusedbuses = setdiff(removedbuses(:,1), addedbuses); %get all unsued buses
 mpc.branch = [mpc.branch; cutlines(~ismember(cutlines(:, F_BUS), unusedbuses) & ~ismember(cutlines(:, T_BUS), unusedbuses), :)];
 %add newly connected branches to the mpc from cutlines
 
-if size(addedlines, 2) > 1
-    aa = 66;
-end
 
-for i = 1:size(addedlines, 2)
-    for j = 1:size(removedlines, 1)
-        linetocheck = removedlines(j, :);
-        if all(addedlines{i} == linetocheck(1:6))
-            if ~ismember(linetocheck(1), unusedbuses) && ~ismember(linetocheck(2), unusedbuses)
-                mpc.branch = [mpc.branch; linetocheck];
-                removedlines(j) = [];
-            end
-            break
-        end
+for i = 1:size(addedlines, 1)
+    curaddedlineidx = remlineidx == addedlines(i);
+    curaddedline = removedlines(curaddedlineidx, :);
+    if ~ismember(curaddedline(T_BUS), unusedbuses) && ~ismember(curaddedline(F_BUS), unusedbuses)
+        mpc.branch = [mpc.branch; curaddedline];
     end
 end
 
 
-%get islands as before using python
-branchespy = py.numpy.array(mpc.branch(:,1:2));
-buslist = py.numpy.array(mpc.bus(:,1));
-islanding = py.islanding.test_islanding(branchespy, buslist);
+%get islands as before once again using matlab
+branches = mpc.branch(:, 1:2);        
+buslist = mpc.bus(:, 1); 
+islanding = test_islanding(branches, buslist);
 islands = reshape(cell(islanding), [size(islanding, 2), 1]);
 
-
-for j=1:size(islands,1)
-   cq = cell(islands{j,1});
-   islands{j,1} = [cq{:}]; %converting python stuff to matlab stuff
-end
 
 totalshed = 0; %calculate load shed of each island
 for j=1:size(islands,1)

@@ -4,14 +4,14 @@ outputinfo = struct('allseq', [], 'seq', [], 'cost', 0, 'time', 0);
 datastruct = struct('totalcase', outputinfo, 'caseminusitem', 0); %datastruct with DCOPF output data
 %totalcase gives the cost of the entire outage
 
-numbusesincase = size(buses_removed, 2);
-numlinesincase = size(lines_removed, 2);
+numbusesincase = size(buses_removed, 1);
+numlinesincase = size(lines_removed, 1);
 casebusimportances = table;
-casebusimportances.bus = transpose(buses_removed);
+casebusimportances.bus = buses_removed;
 casebusimportances.importance = zeros(numbusesincase, 1);
 
 caselineimportances = table;
-caselineimportances.line = transpose(lines_removed);
+caselineimportances.line = lines_removed;
 caselineimportances.importance = zeros(numlinesincase, 1);
 
 [totalcase, ~] = removeandrestore(mpc, buses_removed, lines_removed, struct('function', @keepx, 'value', numlinesincase + numbusesincase));
