@@ -25,12 +25,15 @@ datastruct.totalcase = totalcase;
 if (numbusesincase + numlinesincase) == 1
     caseminusitem = struct();
     caseminusitem.indivcase = 0;
+    caseminusitem.diffcost = totalcasecost;
     if numbusesincase == 1
         caseminusitem.itemprefixed = buses_removed;
+        casebusimportances.importance(1) = totalcasecost;
     else
-        caseminusitem.itemprefixed = casee;
+        caseminusitem.itemprefixed = lines_removed;
+        caselineimportances.importance(1) = totalcasecost;
     end
-    caseminusitem.diffcost = totalcasecost;
+    
     datastruct.caseminusitem = caseminusitem;
     return
 end
@@ -48,6 +51,7 @@ for j = 1:numbusesincase
     diffcost = totalcasecost - divcasecost;
     caseminusitem(j).diffcost = diffcost;
     casebusimportances.importance(j) = diffcost;
+end
 for j = 1:numlinesincase
     dividedcase = lines_removed;
     dividedcase(j) = []; %removing the "strengthened" item

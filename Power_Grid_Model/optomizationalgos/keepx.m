@@ -17,7 +17,9 @@ for i=1:(size(removedbuses, 1) + size(removedlines, 1) -1)
                 %toaddsequence = toaddsequence(~cellfun('isempty', toaddsequence)); %weird thing is happening with the sequence thing being a cell array
                 lossafteriter = addbusandsim(mpc, removedbuses, removedlines, remlineidx, cutlines, toaddsequence); %get total loss of buses using this sequence
                 eventtime = size(cutlines(cutlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(cutlines(cutlines(:, T_BUS) == removedbuses(k, 1), :), 1);
-                eventtime = eventtime + size(removedlines(removedlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(removedlines(removedlines(:, T_BUS) == removedbuses(k, 1), :), 1);
+                if ~isempty(removedlines)
+                    eventtime = eventtime + size(removedlines(removedlines(:, F_BUS) == removedbuses(k, 1), :), 1) + size(removedlines(removedlines(:, T_BUS) == removedbuses(k, 1), :), 1);
+                end
                 iterrestored = cursequences(j).lossafteriter - lossafteriter;
                 totalrestored = origloss - lossafteriter;
                 totaltime = cursequences(j).totaltime + eventtime;

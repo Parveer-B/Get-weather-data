@@ -7,17 +7,20 @@ define_constants;
 addedbuses = toaddsequence(toaddsequence > 0); %split my sequence into lines and buses
 addedlines = toaddsequence(toaddsequence < 0);
 
-mpc.bus = [mpc.bus; removedbuses(ismember(removedbuses(:,1), addedbuses), :)]; %add buses in our sequence to the mpc
-unusedbuses = setdiff(removedbuses(:,1), addedbuses); %get all unsued buses
-mpc.branch = [mpc.branch; cutlines(~ismember(cutlines(:, F_BUS), unusedbuses) & ~ismember(cutlines(:, T_BUS), unusedbuses), :)];
+if ~isempty(removedbuses)
+    mpc.bus = [mpc.bus; removedbuses(ismember(removedbuses(:,1), addedbuses), :)]; %add buses in our sequence to the mpc
+    unusedbuses = setdiff(removedbuses(:,1), addedbuses); %get all unsued buses
+    mpc.branch = [mpc.branch; cutlines(~ismember(cutlines(:, F_BUS), unusedbuses) & ~ismember(cutlines(:, T_BUS), unusedbuses), :)];
 %add newly connected branches to the mpc from cutlines
-
+end
 
 for i = 1:size(addedlines, 1)
     curaddedlineidx = remlineidx == addedlines(i);
     curaddedline = removedlines(curaddedlineidx, :);
-    if ~ismember(curaddedline(T_BUS), unusedbuses) && ~ismember(curaddedline(F_BUS), unusedbuses)
-        mpc.branch = [mpc.branch; curaddedline];
+    if ~isempty(removedbuses)
+        if ~ismember(curaddedline(T_BUS), unusedbuses) && ~ismember(curaddedline(F_BUS), unusedbuses)
+            mpc.branch = [mpc.branch; curaddedline];
+        end
     end
 end
 
@@ -40,6 +43,11 @@ end
 
 %get total load knocked out. Equal to the sum of removed buses - buses we
 %added
-totalknockedout = sum(removedbuses(:,PD)) - sum(removedbuses(ismember(removedbuses(:,1), addedbuses), PD));
+if ~isempty(removedbuses)
+    totalknockedout = sum(removedbuses(:,PD)) - sum(removedbuses(ismember(removedbuses(:,1), addedbuses), PD));
+else
+    totalknockedout = 0;
+end
+
 totalloss = totalknockedout + totalshed; %get the total loss
 end

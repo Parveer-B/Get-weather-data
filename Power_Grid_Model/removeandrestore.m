@@ -13,33 +13,38 @@ linetimings = [lines_to_remove.leninbox];
 %Do lines first
 alllineidxs = zeros(1, size(lines_to_remove, 1));
 for i=1:size(lines_to_remove, 1)
-    line = lines_to_remove(i);
-    matchlineidx = find((mpc.branch(:, F_BUS) == line.busfrom | mpc.branch(:, T_BUS) == line.busfrom) & (mpc.branch(:, F_BUS) == line.busto | mpc.branch(:, T_BUS) == line.busto));
-    lineidx = matchlineidx(line.connumber);
-    alllineidxs(i) = lineidx;
-    removedlines = [removedlines; mpc.branch(lineidx,:)];
-    %mpc.branch(lineidx,:) = [];, this line breaks everything loll
+    if ~isempty(lines_to_remove)
+        line = lines_to_remove(i);
+        matchlineidx = find((mpc.branch(:, F_BUS) == line.busfrom | mpc.branch(:, T_BUS) == line.busfrom) & (mpc.branch(:, F_BUS) == line.busto | mpc.branch(:, T_BUS) == line.busto));
+        lineidx = matchlineidx(line.connumber);
+        alllineidxs(i) = lineidx;
+        removedlines = [removedlines; mpc.branch(lineidx,:)];
+    end
 end
 
-mpc.branch(alllineidxs, :) = []; %remove removed lines from the mpc
-
-remlineidx = alllineidxs*-1; %this provides a correspondance between the lines in the mpc, and my lines in the sequence
+if ~isempty(lines_to_remove)
+    mpc.branch(alllineidxs, :) = []; %remove removed lines from the mpc
+    
+    remlineidx = alllineidxs*-1; %this provides a correspondance between the lines in the mpc, and my lines in the sequence
+else
+    remlineidx = [];
+end
 
 
 
 for i=1:size(buses_to_remove, 1)
-    rowtoremove = find(mpc.bus(:,1) == buses_to_remove(i));
-
-
-    %cut the lines
-    %check if branch contains bus. if so cut the line and add the line to
-    %the cutlines array
-    cutlines = [cutlines; mpc.branch(mpc.branch(:, F_BUS) == buses_to_remove(i) | mpc.branch(:, T_BUS) == buses_to_remove(i), :)];
-    mpc.branch(mpc.branch(:, F_BUS) == buses_to_remove(i) | mpc.branch(:, T_BUS)== buses_to_remove(i), :) = [];
-    
-    %remove the knocked out bus
-    removedbuses = [removedbuses; mpc.bus(rowtoremove,:)];
-    mpc.bus(rowtoremove,:) = []; 
+    if ~isempty(buses_to_remove)
+        rowtoremove = find(mpc.bus(:,1) == buses_to_remove(i));
+        %cut the lines
+        %check if branch contains bus. if so cut the line and add the line to
+        %the cutlines array
+        cutlines = [cutlines; mpc.branch(mpc.branch(:, F_BUS) == buses_to_remove(i) | mpc.branch(:, T_BUS) == buses_to_remove(i), :)];
+        mpc.branch(mpc.branch(:, F_BUS) == buses_to_remove(i) | mpc.branch(:, T_BUS)== buses_to_remove(i), :) = [];
+        
+        %remove the knocked out bus
+        removedbuses = [removedbuses; mpc.bus(rowtoremove,:)];
+        mpc.bus(rowtoremove,:) = []; 
+    end    
 end
    
 
@@ -94,7 +99,7 @@ for i=1:size(islands,1)
     totalshed = totalshed + 100*sum(resultt(end-numbuses+1:end));
 end
 
-if size(buses_to_remove, 2) == 0
+if isempty(buses_to_remove)
     totalknockedout = 0;
 else
     totalknockedout = sum(removedbuses(:,PD));
@@ -102,7 +107,11 @@ end
 
 totalloss = totalshed + totalknockedout;
 
-correspondance = table(transpose(remlineidx), lines_to_remove);
+if isempty(lines_to_remove)
+    correspondance = 0;
+else
+    correspondance = table(transpose(remlineidx), lines_to_remove);
+end
 
 %Do bus restoration here
 outputstruct = repmat(struct('allseq', [], 'seq', [], 'cost', 0, 'time', 0, 'correspondance', correspondance), size(algoinputs, 1), 1);
