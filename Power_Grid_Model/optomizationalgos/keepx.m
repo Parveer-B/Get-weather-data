@@ -3,7 +3,7 @@ function [allsequences,bestsequence,cost] = keepx(keepn,mpc, removedbuses, remov
 %sequences before continuing
 %   Detailed explanation goes here
 define_constants;
-timingmodifier = 0.2;
+timingmodifier = 1;
 %create a struct of the sequences for the current iteration
 cursequences = repmat(struct('sequence', [], 'cost', 0, 'mockcost' ,0, 'lossafteriter', origloss, 'totalrestored', 0, 'iterrestored', 0, 'totaltime', 0), 1, 1);
 %create a struct of the sequences for the next iteration
