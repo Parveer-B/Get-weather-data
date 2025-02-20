@@ -1,7 +1,7 @@
 from Get_Weather_Event import readheatmapdata
 from Get_Weather_Event import grabtornadoazlen
 from Get_Weather_Event import gettlandsubcoords
-from Get_Weather_Event import genwindhail
+from Get_Weather_Event import genwindice
 import netCDF4 as nc
 import numpy as np
 from shapely.geometry import Polygon
@@ -139,9 +139,7 @@ class Buses_Removed:
         #self.eventtypes = {0 : 'wind', 1: 'hail', 2 : 'tornado'}
 
         if eventtype == 'wind' or eventtype == 'ice':
-            self.stormboxes = genwindhail(path, eventtype)
-        
-
+            self.windicegen = genwindice.wind_ice_events(path, eventtype, self.substations, self.transmissionlines)
 
     def generate_tornado(self, givenevent):
         if givenevent:
