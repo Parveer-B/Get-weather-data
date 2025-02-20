@@ -60,6 +60,7 @@ class location_generation:
 
         alllatitudes = self.sl_grid_y[0] #get all lat values
         normalizer = alllatitudes * np.cos(np.radians(alllatitudes))
+        #WHY am I multiplying by alllatitudes here?? Doesn't seem like I should be :0
         self.norm_grid_z = self.sl_grid_z*normalizer #normalized grid to make it even along the sphere
 
         #get p(x) discrete probability "distribution" (not normalized yet)

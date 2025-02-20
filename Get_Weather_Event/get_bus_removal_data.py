@@ -1,6 +1,7 @@
 from Get_Weather_Event import readheatmapdata
 from Get_Weather_Event import grabtornadoazlen
 from Get_Weather_Event import gettlandsubcoords
+from Get_Weather_Event import genwindhail
 import netCDF4 as nc
 import numpy as np
 from shapely.geometry import Polygon
@@ -123,26 +124,23 @@ def gettlinbox(lines, box):
 
 
 class Buses_Removed:
-    def __init__(self):
-        #studylocation = [-110, -79, 25, 47.6] #minx, maxx, miny, maxy, whole mainland
-        studylocation = [-108, -93, 25, 37]
-        self.tornadoposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/sigtornEF2orhigher.nc'), studylocation, 'sigtorn')
-        self.hailposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/sighailover2inches.nc'), studylocation, 'sighail')
-        self.windposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/allsigwindover64knots.nc'), studylocation, 'allsigwind')
-        #note, when filtering wind and hail data, make it consistent with the heatmaps
-
-        self.tornadodatagen = grabtornadoazlen.get_tornado_data()
-        #add these (with the same class for them) for hail and wind
-
-
-        self.probwindhailtorn = [0, 0, 1] #MODIFY!!
-        #you know what, calculate this in a function above (not in the class). Start at 1998
-
-        self.eventtypes = {0 : 'wind', 1: 'hail', 2 : 'tornado'}
-
+    def __init__(self, eventtype, path = None):
         self.substations = gettlandsubcoords.getsubcoords()
-
         self.transmissionlines = gettlandsubcoords.gettlcoords()
+        #studylocation = [-110, -79, 25, 47.6] #minx, maxx, miny, maxy, whole mainland
+        if eventtype == 'tornado':
+            studylocation = [-108, -93, 25, 37]
+            self.tornadoposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/sigtornEF2orhigher.nc'), studylocation, 'sigtorn')
+            self.tornadodatagen = grabtornadoazlen.get_tornado_data()
+        #self.hailposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/sighailover2inches.nc'), studylocation, 'sighail')
+        #self.windposgen = readheatmapdata.location_generation(nc.Dataset('Get_Weather_Event/Heatmaps/allsigwindover64knots.nc'), studylocation, 'allsigwind')
+        #note, when filtering wind and hail data, make it consistent with the heatmaps
+        #self.probwindhailtorn = [0, 0, 1] #MODIFY!!
+        #self.eventtypes = {0 : 'wind', 1: 'hail', 2 : 'tornado'}
+
+        if eventtype == 'wind' or eventtype == 'ice':
+            self.stormboxes = genwindhail(path, eventtype)
+        
 
 
     def generate_tornado(self, givenevent):
@@ -155,9 +153,6 @@ class Buses_Removed:
         eventbox = getbox(slon, slat, length, width, azimuth)
         return eventbox, magnitude
     
-    def generate_wind_hail(self, event):
-        #this just returns the box
-        return 5, 6
 
 
     def get_event_data(self, givenevent = False):
