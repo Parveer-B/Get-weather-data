@@ -26,12 +26,7 @@ def getbox(slon, slat, len, wid, az):
 
     return np.vstack((start+dside, start-dside,start-dside+dfor, start+dside+dfor))
 
-def pointinquadral(point, box):
-    areaofbox = 0
-    for x in range(len(box)):
-        areaofbox+=box[x][1]*(box[(x-1)%len(box)][0]-box[(x+1)%len(box)][0])
-    areaofbox = abs(areaofbox)/2
-
+def pointinquadral(point, box, areaofbox):
     areatriangles = 0
     for x in range(len(box)):
         A = box[x]
@@ -43,18 +38,31 @@ def pointinquadral(point, box):
         return False
 
 
-def getbusesinbox(substations, box):
+def getbusesinbox(substations, box, areaofbox = 0):
     #Box has corners ABCD in the order of the box array
+
+    #get box area
+    if areaofbox == 0:
+        for x in range(len(box)):
+            areaofbox+=box[x][1]*(box[(x-1)%len(box)][0]-box[(x+1)%len(box)][0])
+        areaofbox = abs(areaofbox)/2
+
+
     hitbuses = []
     hitsubstations = []
     for substation in substations:
         P = substation['loc'] #location of substation
-        if pointinquadral(P, box):
+        if pointinquadral(P, box, areaofbox):
             hitbuses.extend(substation['buses'])
             hitsubstations.append(substation['subid'])
     return hitbuses, hitsubstations
 
-def gettlinbox(lines, box):
+def gettlinbox(lines, box, areaofbox = 0):
+
+    if areaofbox == 0:
+        for x in range(len(box)):
+            areaofbox+=box[x][1]*(box[(x-1)%len(box)][0]-box[(x+1)%len(box)][0])
+        areaofbox = abs(areaofbox)/2
     boxlines = []
     for x in range(4):
         #In Ax+By=C form, put A,B,C in the array as indexes 0,1,2
@@ -77,7 +85,7 @@ def gettlinbox(lines, box):
             if D==0:
                 pass
             x_int = (tline[2]*boxline[1] - boxline[2]*tline[1])/D
-            if (box[i][0] < x_int < box[(i+1)%4][0]) or (box[i][0] > x_int > box[(i+1)%4][0]):
+            if ((box[i][0] - 1e-6) <= x_int <= (box[(i+1)%4][0] + 1e-6)) or ((box[i][0] + 1e-6) > x_int > (box[(i+1)%4][0]) - 1e-6):
                 if (st[0] < x_int < end[0]) or (st[0] > x_int > end[0]):
                     y_int = (tline[2] - tline[0]*x_int)/tline[1]
                     connections.append([x_int, y_int])
@@ -94,14 +102,14 @@ def gettlinbox(lines, box):
         elif len(connections) == 1:
             #one end of TL might be in the box while to other isn't
 
-            if pointinquadral(st, box): #one end in box
+            if pointinquadral(st, box, areaofbox): #one end in box
                 linesinbox.append(tlinedict)
                 dlat = st[1] - connections[0][1]
                 dlon = st[0] - connections[0][0]
                 dy = dlat*110.57 #y change in km
                 dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1]))
                 linesinbox[-1]['leninbox'] = math.sqrt(dy**2 + dx**2)
-            elif pointinquadral(end, box): #other end in box
+            elif pointinquadral(end, box, areaofbox): #other end in box
                 linesinbox.append(tlinedict)
                 dlat = end[1] - connections[0][1]
                 dlon = end[0] - connections[0][0]
@@ -109,7 +117,7 @@ def gettlinbox(lines, box):
                 dx = dlon*111.32*np.cos(np.deg2rad(connections[0][1]))
                 linesinbox[-1]['leninbox'] = math.sqrt(dy**2 + dx**2)
         else: #len(connections) = 0, entire TL can be in the box
-            if pointinquadral(st, box) and pointinquadral(end, box):
+            if pointinquadral(st, box, areaofbox) and pointinquadral(end, box, areaofbox):
                 #technically if this is true for one end of the TL it has to be true for the other but whatever
                 linesinbox.append(tlinedict)
                 dlat = st[1] - end[1]
@@ -141,7 +149,7 @@ class Buses_Removed:
         if eventtype == 'wind' or eventtype == 'ice':
             self.windicegen = genwindice.wind_ice_events(path, eventtype, self.substations, self.transmissionlines)
 
-    def generate_tornado(self, givenevent):
+    def generate_tornado(self, givenevent = False):
         if givenevent:
             slon, slat, magnitude, length, width, azimuth = givenevent[1:]
         else:
@@ -149,31 +157,20 @@ class Buses_Removed:
             magnitude, length, width, azimuth = self.tornadodatagen.gettornadostats(slon, slat)
         #length and width are in kilometres, azimuth is in radians
         eventbox = getbox(slon, slat, length, width, azimuth)
-        return eventbox, magnitude
-    
-
-
-    def get_event_data(self, givenevent = False):
-        #I can also add an event here if I want to test MATLAB
-        givenevent = ['tornado', -103.548, 29.4217, 3, 20, 4, math.pi/8]
-        if givenevent:
-            eventtype = givenevent[0]
-        else:
-            eventtype = self.eventtypes[np.searchsorted(np.cumsum(self.probwindhailtorn), random.random())]
-        if eventtype == 'tornado':
-            eventbox, severity = self.generate_tornado(givenevent)
-        else:
-            eventbox, severity, __, __ = self.generate_wind_hail(eventtype, givenevent)
-
         busesinbox, substationsinbox = getbusesinbox(self.substations, eventbox)
         tlinbox = gettlinbox(self.transmissionlines, eventbox)
-
-        #just put these in for now, will modify when civ model added
-        busesremoved = busesinbox
-        tlremoved = tlinbox
-
         
-        return busesinbox, tlinbox, busesremoved, tlremoved, eventbox, eventtype, severity, substationsinbox
+        tlremoved = tlinbox
+        if magnitude >= 3: #put it at 3 for now
+            busesremoved = busesinbox
+        else:
+            busesremoved = []
+        return busesinbox, tlinbox, busesremoved, tlremoved, eventbox, 'tornado', magnitude, substationsinbox
+    
+    def get_windorice(self, evtype, index):
+        busesremoved, tlremoved = self.windicegen.run_through_events(evtype, index)
+        
+       
 
         
     

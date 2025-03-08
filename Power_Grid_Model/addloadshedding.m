@@ -6,17 +6,25 @@ mpc = ext2int(mpc);
 % Create the optimization model object
 om = opf_setup(mpc, mpoption('model', 'DC'));
 
+%lines added below for Feb 28 edge case
+om = om.add_var('PMINred', size(mpc.gen, 1), zeros(size(mpc.gen, 1), 1), zeros(size(mpc.gen, 1), 1), mpc.gen(:, PMIN)/mpc.baseMVA, 'C');
+om.lin.data.vs.Pmis(3).name = 'PMINred';
+om.lin.data.vs.Pmis(3).idx = {};
+om.lin.data.A.Pmis = [om.lin.data.A.Pmis -1*om.lin.data.A.Pmis(:, om.var.idx.i1.Pg: om.var.idx.iN.Pg)];
+
+
 %add the load shedding variable
 om = om.add_var('loadshed', size(mpc.bus, 1), zeros(size(mpc.bus, 1), 1), zeros(size(mpc.bus, 1), 1), mpc.bus(:, PD)/mpc.baseMVA, 'C');
+
 
 %get negative identity matrix for loadshed variables 
 negI = -1*eye(size(mpc.bus, 1));
 
-om.lin.data.vs.Pmis(3).name = 'loadshed';
-om.lin.data.vs.Pmis(3).idx = {};
+om.lin.data.vs.Pmis(4).name = 'loadshed';
+om.lin.data.vs.Pmis(4).idx = {};
 om.lin.data.A.Pmis = [om.lin.data.A.Pmis negI];
 
-%editing cost function here
+% overwriting previous cost function here
 if isfield(om.var.data.v0, 'y')
     om.qdc.data.vs.pwl(1).name = 'loadshed';
     om.qdc.data.Q.pwl = zeros(size(mpc.bus, 1));
@@ -35,7 +43,19 @@ else
     om.qdc.idx.N.polPg = size(mpc.bus, 1);
 end
 
-result = dcopf_solver(om, mpoption('verbose', 0, 'opf.dc.solver', 'OT'));
+om.add_quad_cost('BelowPMINpenalty', [], 100000*ones(size(mpc.gen, 1), 1), 0, {'PMINred'})
+
+while true
+    result = dcopf_solver(om, mpoption('verbose', 0, 'opf.dc.solver', 'OT'));
+    vals = result.x(om.var.idx.i1.PMINred: om.var.idx.iN.PMINred);
+    if sum(vals) == 0
+        break
+    end
+    om.var.data.vl.Pg(vals > 0) = 0;
+    om.var.data.vu.Pg(vals > 0) = 0;
+end
+
+
 
 
 

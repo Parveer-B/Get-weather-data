@@ -18,6 +18,7 @@ caselineimportances.importance = zeros(numlinesincase, 1);
 totalcasecost = totalcase.cost;
 
 if isnan(totalcasecost)
+    a = broken
     return
 end
 

@@ -36,5 +36,4 @@ Output:
 24. END FOR  
 
 25. Sort curseq by blackout value (ascending order)  
-26. RETURN sequence with the lowest blackout value
-		
+26. RETURN sequence with the lowest blackout value		
