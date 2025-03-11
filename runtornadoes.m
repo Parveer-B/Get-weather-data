@@ -1,29 +1,33 @@
 function runtornadoes()
 
-addpath('matpower7.1')
-install_matpower(1,0,0,1)
-define_constants;
+a = 5
+
+pyenv('Version', '/home/parveerb/myenv/bin/python')
+a = 6
 
 if count(py.sys.path, 'Get_Weather_Event') == 0
     insert(py.sys.path, int32(0), 'Get_Weather_Event');
 end
-
-if count(py.sys.path, 'Power_grid_Model') == 0
-    insert(py.sys.path, int32(0), 'Power_grid_Model');
-end
+a = 7
 
 get_bus_removal_data = py.importlib.import_module('get_bus_removal_data');
+a = 8
 event_generator = get_bus_removal_data.Buses_Removed(py.str('tornado'));
+a = 9
+
+addpath('matpower7.1')
+install_matpower(1,0,0,1)
+
+define_constants;
 
 %Modifiables
 numcases = 10000;
 load_scale = 1;
 mpc = loadcase("Texas7k_20210804.m");
 %end of modifiables
-
+a = 99
 mpc = scale_load(load_scale, mpc);
-define_constants;
-
+a = 999
 
 fulloutputstruct = repmat(struct('gridsimdata', [], 'caserembusimportances', [], 'eventtype', '','caseremlineimportances' , [],'severity', 0, 'box', [], 'busesinbox', [], 'linesinbox', [], 'substationsinbox', []), numcases, 1);
 
