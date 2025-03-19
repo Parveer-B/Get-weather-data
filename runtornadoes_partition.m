@@ -1,76 +1,61 @@
-function runtornadoes()
+function runtornadoes_partition(partitionno)
 
-a = 5
-
-pyenv('Version', 'ENV2/bin/python')
-
-a = 6
-
-if count(py.sys.path, 'Get_Weather_Event') == 0
-    insert(py.sys.path, int32(0), 'Get_Weather_Event');
-end
-a = 7
-flag = int32(bitor(2, 8));
-py.sys.setdlopenflags(flag);
-a = 7.5
-
-get_bus_removal_data = py.importlib.import_module('get_bus_removal_data');
-a = 8
-event_generator = get_bus_removal_data.Buses_Removed(py.str('tornado'));
-a = 9
-
+addpath('ImpData')
+addpath('gentornadoes')
 addpath('matpower7.1')
 install_matpower(1,0,0,1)
+%Uncomment out the above for NARVAL!
 
 define_constants;
 
 %Modifiables
-numcases = 1000;
 load_scale = 1;
 mpc = loadcase("Texas7k_20210804.m");
 %end of modifiables
-a = 99
 mpc = scale_load(load_scale, mpc);
-a = 999
+load(sprintf('gentornadoes/tornadoes_set%d.mat', partitionno), 'data')
+numcases = size(data, 2);
+j = 0;
+if exist(sprintf('ImpData/progress%d.mat', partitionno), 'file')
+    load(sprintf('ImpData/outputstruct%d.mat', partitionno), 'fulloutputstruct')
+    load(sprintf('ImpData/busimp%d.mat', partitionno), 'totalbusimportanceData')
+    load(sprintf('ImpData/lineimp%d.mat', partitionno), 'totallineimportanceData')
+    j = load(sprintf('ImpData/progress%d.mat', partitionno), 'i').i;
+else
+    fulloutputstruct = repmat(struct('gridsimdata', [], 'caserembusimportances', [], 'caseremlineimportances' , [],'severity', 0, 'box', [], 'busesinbox', [], 'linesinbox', [], 'substationsinbox', []), numcases, 1);
+    totalbusimportanceData = table([], [], 'VariableNames', {'bus', 'importance'});
+    totallineimportanceData = table([], [], 'VariableNames', {'line', 'importance'});
+end
+for i = j+1:numcases
 
-fulloutputstruct = repmat(struct('gridsimdata', [], 'caserembusimportances', [], 'eventtype', '','caseremlineimportances' , [],'severity', 0, 'box', [], 'busesinbox', [], 'linesinbox', [], 'substationsinbox', []), numcases, 1);
+    event = data{1, i};
+    fulloutputstruct(i).busesinbox = transpose(event.busesinbox);
 
-totalbusimportanceData = table([], [], 'VariableNames', {'bus', 'importance'});
-totallineimportanceData = table([], [], 'VariableNames', {'line', 'importance'});
-for i = 1:numcases
-    hitbuses = event_generator.generate_tornado();
+    matlablines = repmat(struct('busfrom', 0, 'busto', 0, 'connumber', 0, 'leninbox', 0), size(event.tlremoved, 2), 1);
+    for k = 1:size(event.tlremoved, 2)
+        line = event.tlremoved{1, k};
+        matlablines(k).busfrom = line.busfrom;
+        matlablines(k).busto = line.busto;
+        matlablines(k).from = line.from;
+        matlablines(k).to = line.to;
+        matlablines(k).connumber = line.connumber;
+        matlablines(k).leninbox = line.leninbox;
+    end
 
-    pybusinbox = hitbuses(1);
-    fulloutputstruct(i).busesinbox = double(pybusinbox{1});
 
-    pylinesinbox = hitbuses(2);
-    fulloutputstruct(i).linesinbox = pytomatlinedict(pylinesinbox);
+    fulloutputstruct(i).linesinbox = matlablines;
 
-    pyrembuses = hitbuses(3);
-    rembuses = transpose(double(pyrembuses{1}));
+    rembuses = transpose(event.busesremoved);
 
-    pylinesrem = hitbuses(4);
-    linesrem = pytomatlinedict(pylinesrem);
-    %below is just converting the box
-    pybox = hitbuses(5);
-    %this weird thing allows me to get the python array into a cell array
-    %the cellfun is needed to convert each row in the array to a double
-    cell_box = cellfun(@double, cell(pybox{1}.tolist()), 'UniformOutput', false);
-    fulloutputstruct(i).box = vertcat(cell_box{:});
+ 
+    linesrem = matlablines; %assumes all lines in the box go out
+    fulloutputstruct(i).box = event.eventbox;
 
     %now do the weather event
-    pyevent = hitbuses(6);
-    fulloutputstruct(i).eventtype = string(pyevent{1});
     
-    severitypy = hitbuses(7);
-    fulloutputstruct(i).severity = double(severitypy{1}.item());
+    fulloutputstruct(i).severity = event.magnitude;
 
-    pysubinbox = hitbuses(8);
-    fulloutputstruct(i).substationsinbox = double(pysubinbox{1});
-
-    if (size(rembuses, 1) > 0) | (size(linesrem, 1) > 0)
-        hi = i
-    end %%remove!!
+    fulloutputstruct(i).substationsinbox = transpose(event.substationsinbox);
 
     if (size(rembuses, 1) > 0) | (size(linesrem, 1) > 0)
         [simstruct, simbusimportances, simlineimportances] = getbusimportances(mpc, rembuses, linesrem);
@@ -121,10 +106,17 @@ for i = 1:numcases
         end
 
     end
+    if mod(i, 1000) == 0
+        save('ImpData/outputstruct' + string(partitionno), "fulloutputstruct")
+        save('ImpData/busimp' + string(partitionno), "totalbusimportanceData")
+        save('ImpData/lineimp' + string(partitionno), "totallineimportanceData")
+        save('ImpData/progress' + string(partitionno), "i")
+        disp(i)
+    end
 end
-save('outputstruct' + string(randi(10000000)), "fulloutputstruct")
-save('busimp' + string(randi(10000000)), "totalbusimportanceData")
-save('lineimp' + string(randi(10000000)), "totallineimportanceData")
+save('ImpData/outputstruct' + string(partitionno), "fulloutputstruct")
+save('ImpData/busimp' + string(partitionno), "totalbusimportanceData")
+save('ImpData/lineimp' + string(partitionno), "totallineimportanceData")
 
 
 end

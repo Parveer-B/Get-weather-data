@@ -33,7 +33,13 @@ def pointinquadral(point, box, areaofbox):
         B = box[(x+1)%len(box)]
         areatriangles += Polygon(np.vstack((A, B, point))).area
     if abs(areatriangles - areaofbox) <= 1e-5:
-        return True
+        if areaofbox <= 5e-4:
+            if abs(areaofbox/areatriangles - 1) <= 1e-6:
+                return True
+            else:
+                return False
+        else:
+            return True
     else:
         return False
 
@@ -81,11 +87,16 @@ def gettlinbox(lines, box, areaofbox = 0):
         connections = []
         for i, boxline in enumerate(boxlines):
             #tline is index 1 and boxline is index 2 in the post above
+
             D = tline[0]*boxline[1] -boxline[0]*tline[1]
             if D==0:
                 pass
             x_int = (tline[2]*boxline[1] - boxline[2]*tline[1])/D
-            if ((box[i][0] - 1e-6) <= x_int <= (box[(i+1)%4][0] + 1e-6)) or ((box[i][0] + 1e-6) > x_int > (box[(i+1)%4][0]) - 1e-6):
+            if ((box[i][0] - 1e-6) <= x_int <= (box[(i-1)%4][0] + 1e-6)) or ((box[i][0] + 1e-6) > x_int > (box[(i-1)%4][0]) - 1e-6):
+                if boxline[1] == 0: #vertical line case march 16th
+                    y_int = (tline[2] - tline[0]*x_int)/tline[1]
+                    if not (((box[i][1] - 1e-6) <= y_int <= (box[(i+1)%4][1] + 1e-6)) or ((box[i][1] + 1e-6) > y_int > (box[(i+1)%4][1]) - 1e-6)):
+                        continue
                 if (st[0] < x_int < end[0]) or (st[0] > x_int > end[0]):
                     y_int = (tline[2] - tline[0]*x_int)/tline[1]
                     connections.append([x_int, y_int])

@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=matlab_running
+#SBATCH --job-name=python_running
 #SBATCH --account=def-zebtate # adjust this to match the accounting group you are using to submit jobs
 #SBATCH --time=7-00:00   # adjust this to match the walltime of your job
 #SBATCH --nodes=1      
@@ -10,18 +10,19 @@
 #SBATCH --mail-type=END
 
 # Choose a version of MATLAB by loading a module:
-module load matlab/2023b.2
-#module load python/3.10
+
+module load python/3.10
 
 #module load scipy-stack  # Loads scipy, numpy, matplotlib, pandas, etc.
 #module load netcdf        # Loads netCDF4 and dependencies
 
-#module load mpi4py/3.1.4
-#pip install mpi4py
-#pip install matplotlib
-#pip install seaborn
+module load mpi4py/3.1.4
+source ENV2/bin/activate
 
-ARG1=$1
+
+pip install mpi4py
 
 # Remove -singleCompThread below if you are using parallel commands:
-matlab -nodisplay -singleCompThread -r "runtornadoes_partition($ARG1); exit;"
+ARG1=$1
+
+python maineventgen.py 50000 $ARG1
