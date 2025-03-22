@@ -14,7 +14,7 @@ caselineimportances = table;
 caselineimportances.line = lines_removed;
 caselineimportances.importance = zeros(numlinesincase, 1);
 
-[totalcase, ~] = removeandrestore(mpc, buses_removed, lines_removed, struct('function', @keepx, 'value', numlinesincase + numbusesincase));
+[totalcase, ~] = removeandrestore(mpc, buses_removed, lines_removed, struct('function', @keepx, 'value', 1));
 totalcasecost = totalcase.cost;
 
 if isnan(totalcasecost)
@@ -45,7 +45,7 @@ caseminusitem = repmat(struct('indivcase', outputinfo, 'itemprefixed', 0, 'diffc
 for j = 1:numbusesincase
     dividedcase = buses_removed;
     dividedcase(j) = []; %removing the "strengthened" item
-    [divcaseres, ~] = removeandrestore(mpc, dividedcase, lines_removed, struct('function', @keepx, 'value', numlinesincase + numbusesincase - 1));
+    [divcaseres, ~] = removeandrestore(mpc, dividedcase, lines_removed, struct('function', @keepx, 'value', 1));
     divcasecost = divcaseres.cost;
     caseminusitem(j).indivcase = divcaseres;
     caseminusitem(j).itemprefixed = buses_removed(j);
@@ -56,7 +56,7 @@ end
 for j = 1:numlinesincase
     dividedcase = lines_removed;
     dividedcase(j) = []; %removing the "strengthened" item
-    [divcaseres, ~] = removeandrestore(mpc, buses_removed, dividedcase, struct('function', @keepx, 'value', numlinesincase + numbusesincase - 1));
+    [divcaseres, ~] = removeandrestore(mpc, buses_removed, dividedcase, struct('function', @keepx, 'value', 1));
     divcasecost = divcaseres.cost;
     caseminusitem(j + numbusesincase).indivcase = divcaseres;
     caseminusitem(j + numbusesincase).itemprefixed = lines_removed(j);

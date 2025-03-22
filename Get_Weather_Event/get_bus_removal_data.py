@@ -92,7 +92,7 @@ def gettlinbox(lines, box, areaofbox = 0):
             if D==0:
                 pass
             x_int = (tline[2]*boxline[1] - boxline[2]*tline[1])/D
-            if ((box[i][0] - 1e-6) <= x_int <= (box[(i-1)%4][0] + 1e-6)) or ((box[i][0] + 1e-6) > x_int > (box[(i-1)%4][0]) - 1e-6):
+            if ((box[i][0] - 1e-6) <= x_int <= (box[(i+1)%4][0] + 1e-6)) or ((box[i][0] + 1e-6) > x_int > (box[(i+1)%4][0]) - 1e-6):
                 if boxline[1] == 0: #vertical line case march 16th
                     y_int = (tline[2] - tline[0]*x_int)/tline[1]
                     if not (((box[i][1] - 1e-6) <= y_int <= (box[(i+1)%4][1] + 1e-6)) or ((box[i][1] + 1e-6) > y_int > (box[(i+1)%4][1]) - 1e-6)):

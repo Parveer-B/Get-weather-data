@@ -43,8 +43,9 @@ else
     om.qdc.idx.N.polPg = size(mpc.bus, 1);
 end
 
-om.add_quad_cost('BelowPMINpenalty', [], 100000*ones(size(mpc.gen, 1), 1), 0, {'PMINred'});
-
+if size(mpc.gen, 1) > 0
+    om.add_quad_cost('BelowPMINpenalty', [], 100000*ones(size(mpc.gen, 1), 1), 0, {'PMINred'});
+end
 while true
     result = dcopf_solver(om, mpoption('verbose', 0, 'opf.dc.solver', 'OT'));
     vals = result.x(om.var.idx.i1.PMINred: om.var.idx.iN.PMINred);

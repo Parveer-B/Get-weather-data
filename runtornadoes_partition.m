@@ -5,7 +5,8 @@ addpath('gentornadoes')
 addpath('matpower7.1')
 install_matpower(1,0,0,1)
 %Uncomment out the above for NARVAL!
-
+partitionno
+%output partitionno so I know it in .out file when running
 define_constants;
 
 %Modifiables
@@ -23,8 +24,8 @@ if exist(sprintf('ImpData/progress%d.mat', partitionno), 'file')
     j = load(sprintf('ImpData/progress%d.mat', partitionno), 'i').i;
 else
     fulloutputstruct = repmat(struct('gridsimdata', [], 'caserembusimportances', [], 'caseremlineimportances' , [],'severity', 0, 'box', [], 'busesinbox', [], 'linesinbox', [], 'substationsinbox', []), numcases, 1);
-    totalbusimportanceData = table([], [], 'VariableNames', {'bus', 'importance'});
-    totallineimportanceData = table([], [], 'VariableNames', {'line', 'importance'});
+    totalbusimportanceData = table([], [], [], 'VariableNames', {'bus', 'importance', 'hits'});
+    totallineimportanceData = table([], [], [], 'VariableNames', {'line', 'importance', 'hits'});
 end
 for i = j+1:numcases
 
@@ -75,9 +76,10 @@ for i = j+1:numcases
             if isInTable
                 % Update the value
                 totalbusimportanceData.importance(rowIdx) = totalbusimportanceData.importance(rowIdx) + simbusimportances.importance(j);
+                totalbusimportanceData.hits(rowIdx) = totalbusimportanceData.hits(rowIdx) + 1;
             else
                 % Append a new row
-                newRow = {simbusimportances.bus(j), simbusimportances.importance(j)};
+                newRow = {simbusimportances.bus(j), simbusimportances.importance(j), 1};
                 totalbusimportanceData = [totalbusimportanceData; newRow];
             end
         end
@@ -98,9 +100,10 @@ for i = j+1:numcases
             if isInTable
                 % Update the value
                 totallineimportanceData.importance(rowIdx) = totallineimportanceData.importance(rowIdx) + simlineimportances.importance(j);
+                totallineimportanceData.hits(rowIdx) = totallineimportanceData.hits(rowIdx) + 1;
             else
                 % Append a new row
-                newRow = {simlineimportances.line(j), simlineimportances.importance(j)};
+                newRow = {simlineimportances.line(j), simlineimportances.importance(j), 1};
                 totallineimportanceData = [totallineimportanceData; newRow];
             end
         end

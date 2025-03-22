@@ -6,10 +6,10 @@ from Get_Weather_Event import get_bus_removal_data
 test = get_bus_removal_data.Buses_Removed('tornado')
 lines = test.transmissionlines
 stations = test.substations
-box = [[-96.8974473203806, 32.5441868221133],
-[-96.8975435156131, 32.5443363879726],
-[-96.8945328659410, 32.5457310970455],
-[-96.8944366707084, 32.5455815311862]]
+box = [[-96.4442687455020, 30.0381457302045],
+[-96.4450537371116, 30.0356470679912],
+[-95.0550470570980, 29.7039174738072],
+[-95.0542620654884, 29.7064161360206]]
 
-b = get_bus_removal_data.getbusesinbox(stations, box, areaofbox = 0)
+b = get_bus_removal_data.gettlinbox(lines, box, areaofbox = 0)
 a = 6
