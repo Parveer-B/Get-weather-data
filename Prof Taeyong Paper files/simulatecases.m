@@ -6,8 +6,8 @@ install_matpower(1,0,0,1)
 define_constants;
 mpc = loadcase('case9.m'); %load the case file
 mpc = scale_load(2.4, mpc); %increase the load demand by a factor of 1.25 for texas, 2.4 for case 9, and 1.15 for Hawaii
-totalpartitions = 50;
-load("shuff_outages.mat", "shuff_A");
+totalpartitions = 200;
+load("shuff_A.mat", "shuff_A");
 numcases = size(shuff_A, 1);
 outputstruct = repmat(struct('row', 0, 'cost', 0), ceil(numcases/totalpartitions), 1);
 for j = (1+((partitionno-1)*ceil(numcases/totalpartitions))):min(numcases, (partitionno*ceil(numcases/totalpartitions)))

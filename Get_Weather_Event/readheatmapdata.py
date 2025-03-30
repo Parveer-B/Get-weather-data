@@ -121,26 +121,39 @@ class location_generation:
         rescaled_montecarloheatmap = zoom(montecarloheatmap, (self.sl_grid_x.shape[0]/mchmgrid_x.shape[0], self.sl_grid_x.shape[1]/mchmgrid_x.shape[1]), order=1)
         rescaled_montecarloheatmap = rescaled_montecarloheatmap/np.max(rescaled_montecarloheatmap)
 
+        mosaic = """AABB
+                .CC."""
+
+        fig, axs = plt.subplot_mosaic(mosaic, figsize=(10,10), sharey=True)
+
+        ax1 = axs['A']
+        ax2 = axs['B']
+        ax3 = axs['C']
+
+
+        
 
 
         # Plot the result
-        plt.subplot(2, 2, 1)
-        plt.imshow(new_norm_grid_z.T, extent=(self.sl_grid_x[0, 0], self.sl_grid_x[-1, 0], self.sl_grid_y[0, 0], self.sl_grid_y[0, -1]), origin='lower', cmap="inferno")
+        im1 = ax1.imshow(new_norm_grid_z.T, extent=(self.sl_grid_x[0, 0], self.sl_grid_x[-1, 0], self.sl_grid_y[0, 0], self.sl_grid_y[0, -1]), origin='lower', cmap="inferno")
         #plt.plot(longitudes, latitudes, 'ro', markersize = 0.5, alpha = 0.15)  # mark the data points
-        plt.colorbar()
-        plt.title('Linear Interpolation using griddata')
+        fig.colorbar(im1, ax=ax1)
+        ax1.set_ylabel('Latitude')
+        ax1.set_xlabel('Longitude')
 
 
-        plt.subplot(2, 2, 2)
-        plt.imshow(rescaled_montecarloheatmap.T, extent=(self.sl_grid_x[0, 0], self.sl_grid_x[-1, 0], self.sl_grid_y[0, 0], self.sl_grid_y[0, -1]), origin='lower', cmap="inferno")
+        im2 = ax2.imshow(rescaled_montecarloheatmap.T, extent=(self.sl_grid_x[0, 0], self.sl_grid_x[-1, 0], self.sl_grid_y[0, 0], self.sl_grid_y[0, -1]), origin='lower', cmap="inferno")
         #plt.plot(longitudes, latitudes, 'ro', markersize = 0.5, alpha = 0.15)  # mark the data points
-        plt.colorbar()
+        fig.colorbar(im2, ax=ax2)
+        ax2.set_xlabel('Longitude')
 
-        plt.subplot(2, 2, 3)
         difference = new_norm_grid_z/rescaled_montecarloheatmap
-        plt.imshow(difference.T, extent=(self.sl_grid_x[0, 0], self.sl_grid_x[-1, 0], self.sl_grid_y[0, 0], self.sl_grid_y[0, -1]), origin='lower', cmap="coolwarm", norm = colors.LogNorm(vmin = 10e-2, vmax = 10, clip = True))
+        im3 = ax3.imshow(difference.T, extent=(self.sl_grid_x[0, 0], self.sl_grid_x[-1, 0], self.sl_grid_y[0, 0], self.sl_grid_y[0, -1]), origin='lower', cmap="coolwarm", norm = colors.LogNorm(vmin = 10e-2, vmax = 10, clip = True))
         #plt.plot(longitudes, latitudes, 'ro', markersize = 0.5, alpha = 0.15)  # mark the data points
-        plt.colorbar()
+        fig.colorbar(im3, ax=ax3)
+        ax3.set_ylabel('Latitude')
+        ax3.set_xlabel('Longitude')
+        
         plt.show()
 
 """

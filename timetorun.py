@@ -1,10 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 ns = np.arange(1, 61, 1)
+#xs = ns # Keepn
+#xs = ns*0 + 1 #Keep1 or N1Greedy
+
 xs = ns*0 + 1
 xs[12: 15] = np.floor(ns[12:15]/4) # 13 to 15 is n/4
 xs[8: 12] = np.floor(ns[8:12]/2) # 13 to 15 is n/4
-xs[0: 8] = ns[0:8] # 13 to 15 is n/4
+xs[0: 8] = ns[0:8] # 13 to 15 is n/4"
 
 sims = []
 for j in range(60):

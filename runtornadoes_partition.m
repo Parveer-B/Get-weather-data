@@ -2,8 +2,8 @@ function runtornadoes_partition(partitionno)
 
 addpath('ImpData')
 addpath('gentornadoes')
-addpath('matpower7.1')
-install_matpower(1,0,0,1)
+%addpath('matpower7.1')
+%install_matpower(1,0,0,1)
 %Uncomment out the above for NARVAL!
 partitionno
 %output partitionno so I know it in .out file when running
@@ -28,7 +28,6 @@ else
     totallineimportanceData = table([], [], [], 'VariableNames', {'line', 'importance', 'hits'});
 end
 for i = j+1:numcases
-
     event = data{1, i};
     fulloutputstruct(i).busesinbox = transpose(event.busesinbox);
 

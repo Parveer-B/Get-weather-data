@@ -21,6 +21,8 @@ for i = 1:size(addedlines, 1)
         if ~ismember(curaddedline(T_BUS), unusedbuses) && ~ismember(curaddedline(F_BUS), unusedbuses)
             mpc.branch = [mpc.branch; curaddedline];
         end
+    else %if mpc.branch isn't empty
+        mpc.branch = [mpc.branch; curaddedline];
     end
 end
 
