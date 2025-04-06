@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=matlab_running
 #SBATCH --account=def-zebtate # adjust this to match the accounting group you are using to submit jobs
-#SBATCH --time=6-23:59 # adjust this to match the walltime of your job
+#SBATCH --time=3-00:08 # adjust this to match the walltime of your job
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1      # adjust this if you are using parallel commands

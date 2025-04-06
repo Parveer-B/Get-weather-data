@@ -10,7 +10,7 @@ b = 6
 for station in stations:
     intersect = np.intersect1d(impbuses, station["buses"])
     for i in intersect:
-        print(i, station["loc"][0], station["loc"][1])
+        print(i, round(station["loc"][0], 2), round(station["loc"][1], 2))
 
 
 

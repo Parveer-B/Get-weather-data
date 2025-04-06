@@ -1,13 +1,14 @@
 function simulatecases(partitionno)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
+str = 'EQ';
 addpath('matpower7.1')
 install_matpower(1,0,0,1)
 define_constants;
 mpc = loadcase('case9.m'); %load the case file
 mpc = scale_load(2.4, mpc); %increase the load demand by a factor of 1.25 for texas, 2.4 for case 9, and 1.15 for Hawaii
-totalpartitions = 200;
-load("shuff_A.mat", "shuff_A");
+totalpartitions = 50;
+shuff_A = load(strcat('shuff_', str, '.mat')).data;
 numcases = size(shuff_A, 1);
 outputstruct = repmat(struct('row', 0, 'cost', 0), ceil(numcases/totalpartitions), 1);
 for j = (1+((partitionno-1)*ceil(numcases/totalpartitions))):min(numcases, (partitionno*ceil(numcases/totalpartitions)))
@@ -36,6 +37,6 @@ for j = (1+((partitionno-1)*ceil(numcases/totalpartitions))):min(numcases, (part
         disp(localcasenum)
     end
 end
-save('simresults' + string(partitionno), "outputstruct")
+save(strcat(str, '/simresults', string(partitionno)), "outputstruct")
 quit
 end
